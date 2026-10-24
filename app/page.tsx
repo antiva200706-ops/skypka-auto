@@ -124,7 +124,7 @@ export default function Home() {
           <div className="text-xl font-black tracking-tight">
              СКУПКА АВТО
           </div>
-          <div className="text-lg font-bold">+7 963 738-43-04</div>
+          <div className="text-lg font-bold">+7 952 799-27-60</div>
         </header>
 
         <main className="relative z-10 flex-grow flex items-center px-6 md:px-12 py-12">
