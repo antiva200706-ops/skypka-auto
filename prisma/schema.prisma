@@ -20,6 +20,7 @@ model Lead {
   priceMax    Int
   isPinned    Boolean  @default(false)
   createdAt   DateTime @default(now())
+  extraInfo   String?
 }
 
 model CarModel {

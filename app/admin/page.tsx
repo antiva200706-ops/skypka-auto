@@ -8,14 +8,11 @@ export default function Admin() {
   const [isAuth, setIsAuth] = useState(false);
   const [leads, setLeads] = useState<any[]>([]);
 
-  // Загрузка из базы данных
   const loadLeads = async () => {
     try {
       const res = await fetch("/api/leads");
       const data = await res.json();
-      if (Array.isArray(data)) {
-        setLeads(data);
-      }
+      if (Array.isArray(data)) setLeads(data);
     } catch (error) {
       console.log("Ошибка загрузки");
     }
@@ -31,27 +28,22 @@ export default function Admin() {
     }
   };
 
-  // Автообновление раз в 1 секунду
   useEffect(() => {
     if (!isAuth) return;
     const interval = setInterval(() => loadLeads(), 1000);
     return () => clearInterval(interval);
   }, [isAuth]);
 
-  // Удаление из базы
   const handleDelete = async (id: number) => {
     if (!confirm("Удалить заявку навсегда?")) return;
     try {
       const res = await fetch(`/api/leads/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        setLeads(leads.filter(l => l.id !== id));
-      }
+      if (res.ok) setLeads(leads.filter(l => l.id !== id));
     } catch (error) {
       alert("Ошибка при удалении");
     }
   };
 
-  // Закрепление в базе
   const handleTogglePin = async (id: number, currentStatus: boolean) => {
     try {
       const res = await fetch(`/api/leads/${id}`, {
@@ -95,7 +87,6 @@ export default function Admin() {
             <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold animate-pulse">● Онлайн (База данных)</span>
           </div>
           
-          {/* Кнопки навигации */}
           <div className="flex gap-4">
             <Link href="/admin/cars" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium transition">Управление ценами</Link>
             <Link href="/" className="bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700 font-medium transition">Выйти на сайт</Link>
@@ -109,25 +100,30 @@ export default function Admin() {
             {sortedLeads.map((lead) => (
               <div key={lead.id} className={`p-6 rounded-xl shadow flex justify-between items-start border-l-4 ${lead.isPinned ? 'bg-yellow-50 border-yellow-400' : 'bg-white border-transparent'}`}>
                 
-                <div>
+                <div className="flex-1">
                   <div className="flex items-center gap-3 mb-1">
                     <h2 className="text-xl font-bold">{lead.brand}</h2>
                     {lead.isPinned && <span className="bg-yellow-400 text-yellow-900 text-xs px-2 py-1 rounded font-bold">ЗАКРЕПЛЕНО</span>}
                   </div>
-                  <p className="text-gray-700 font-medium">Год: {lead.year} | Пробег: {lead.mileage} км</p>
+                  <p className="text-gray-700 font-medium">Год: {lead.year} | Пробег: {lead.mileage}</p>
                   
                   <div className="flex gap-2 mt-2 flex-wrap">
                     <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">{lead.isRunning}</span>
                     <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">{lead.docs}</span>
                     <span className={`px-2 py-1 rounded text-xs ${lead.isDamaged === 'Битая' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>{lead.isDamaged}</span>
                   </div>
+
+                  {/* ВЫВОД ДОПОЛНИТЕЛЬНОЙ ИНФОРМАЦИИ */}
+                  {lead.extraInfo && (
+                    <div className="mt-3 bg-blue-50 text-blue-800 p-2 rounded text-sm border border-blue-100">
+                      <span className="font-bold">Детали:</span> {lead.extraInfo}
+                    </div>
+                  )}
+
                   <p className="text-sm text-gray-400 mt-3">Дата: {new Date(lead.createdAt).toLocaleString("ru-RU")}</p>
                 </div>
 
-                <div className="text-right flex flex-col items-end">
-                  <p className="text-2xl font-bold text-green-600">
-                    {lead.priceMin.toLocaleString()} - {lead.priceMax.toLocaleString()} ₽
-                  </p>
+                <div className="text-right flex flex-col items-end ml-4">
                   <p className="text-lg font-medium mt-1 mb-3">Тел: {lead.phone}</p>
                   
                   <div className="flex gap-2">

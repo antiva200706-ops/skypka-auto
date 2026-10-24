@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/app/lib/prisma";
+import { prisma } from "../../db";
 
 export async function DELETE(
   req: Request,
@@ -7,11 +7,14 @@ export async function DELETE(
 ) {
   try {
     const { id } = await context.params;
+    const leadId = parseInt(id);
+
     await prisma.carModel.delete({
-      where: { id: parseInt(id) },
+      where: { id: leadId },
     });
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: "Ошибка удаления" }, { status: 500 });
+    console.error("ОШИБКА API DELETE CARS:", error);
+    return NextResponse.json({ error: "Ошибка при удалении" }, { status: 500 });
   }
 }

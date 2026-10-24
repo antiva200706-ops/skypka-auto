@@ -4,93 +4,65 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 
 export default function Home() {
-  const [brand, setBrand] = useState("");
-  const [year, setYear] = useState("");
-  const [mileage, setMileage] = useState("");
-  const [phone, setPhone] = useState("");
+  // Состояние: показываем главный экран или опрос
+  const [showQuiz, setShowQuiz] = useState(false); 
   
-  const [isRunning, setIsRunning] = useState("yes");
-  const [docs, setDocs] = useState("full");
-  const [isDamaged, setIsDamaged] = useState("no");
-  
-  const [priceRange, setPriceRange] = useState<{ min: number; max: number } | null>(null);
+  const [step, setStep] = useState(1);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  
+  const [data, setData] = useState({
+    brand: "",
+    yearRange: "",
+    transmission: "",
+    condition: "",
+    mileageRange: "",
+    meetingTime: "",
+    phone: "",
+    contactMethod: "Звонок",
+  });
 
-  // Состояния для базы машин
   const [carsDb, setCarsDb] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [selectedCar, setSelectedCar] = useState<any | null>(null);
 
-  // Загружаем машины из базы при старте
   useEffect(() => {
-    fetch("/api/cars")
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setCarsDb(data);
-      });
+    fetch("/api/cars").then(res => res.json()).then(d => {
+      if (Array.isArray(d)) setCarsDb(d);
+    });
   }, []);
 
   const suggestions = carsDb.filter(car => 
-    `${car.brand} ${car.model}`.toLowerCase().includes(brand.toLowerCase()) && brand.length > 0
+    `${car.brand} ${car.model}`.toLowerCase().includes(data.brand.toLowerCase()) && data.brand.length > 0
   );
 
   const handleSelectCar = (car: any) => {
-    setBrand(`${car.brand} ${car.model}`);
-    setSelectedCar(car);
+    setData({ ...data, brand: `${car.brand} ${car.model}` });
     setShowSuggestions(false);
   };
 
-  const handleEvaluate = () => {
-    if (!year || !mileage) return alert("Введите год и пробег");
-
-    // Ищем машину в базе
-    let basePrice = 800000; // По умолчанию
-    let foundCar = selectedCar;
-
-    if (!foundCar) {
-      const searchLower = brand.toLowerCase();
-      foundCar = carsDb.find((c: any) => 
-        `${c.brand} ${c.model}`.toLowerCase().includes(searchLower)
-      ) || null;
-    }
-
-    if (foundCar) basePrice = foundCar.marketPrice;
-
-    let realMileage = Number(mileage);
-    if (realMileage > 0 && realMileage < 1000) realMileage = realMileage * 1000;
-
-    const age = 2026 - Number(year);
-    const safeAge = age < 0 ? 0 : age;
-
-    let ageDiscount = Math.min(safeAge * 0.05, 0.6);
-    let mileageDiscount = Math.min((realMileage / 100000) * 0.05, 0.25);
-
-    let currentPrice = basePrice * (1 - ageDiscount - mileageDiscount);
-
-    if (isRunning === "no") currentPrice *= 0.75;
-    if (docs === "no_pts") currentPrice *= 0.85;
-    if (docs === "no_sts") currentPrice *= 0.95;
-    if (isDamaged === "yes") currentPrice *= 0.8;
-
-    if (currentPrice < 30000) currentPrice = 30000;
-
-    const min = Math.round((currentPrice * 0.9) / 1000) * 1000;
-    const max = Math.round((currentPrice * 1.1) / 1000) * 1000;
-
-    setPriceRange({ min, max });
+  const nextStep = () => {
+    if (step === 1 && !data.brand) return alert("Введите марку авто");
+    if (step === 2 && !data.yearRange) return alert("Выберите год");
+    if (step === 3 && !data.transmission) return alert("Выберите коробку передач");
+    if (step === 4 && !data.condition) return alert("Выберите состояние");
+    if (step === 5 && !data.mileageRange) return alert("Выберите пробег");
+    setStep(step + 1);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!priceRange) return alert("Сначала нажмите 'Оценить'");
-    
+    if (!data.phone) return alert("Введите номер телефона");
+
     const newLead = {
-      brand, year, mileage, phone,
-      isRunning: isRunning === "yes" ? "На ходу" : "Не на ходу",
-      docs: docs === "full" ? "Полный пакет" : docs === "no_pts" ? "Нет ПТС" : "Нет СТС",
-      isDamaged: isDamaged === "yes" ? "Битая" : "Не битая",
-      priceMin: priceRange.min,
-      priceMax: priceRange.max,
+      brand: data.brand,
+      year: data.yearRange, 
+      mileage: data.mileageRange,
+      phone: data.phone,
+      isRunning: data.condition === "Неисправное" ? "Не на ходу" : "На ходу",
+      docs: data.condition === "Без документов" ? "Нет документов" : "Полный пакет",
+      isDamaged: data.condition === "Битое" ? "Битая" : "Не битая",
+      priceMin: 0,
+      priceMax: 0,
+      extraInfo: `КПП: ${data.transmission} | Осмотр: ${data.meetingTime} | Связь: ${data.contactMethod}`
     };
 
     try {
@@ -102,126 +74,245 @@ export default function Home() {
 
       if (res.ok) {
         setIsSubmitted(true);
-        setTimeout(() => {
-          setIsSubmitted(false);
-          setBrand(""); setYear(""); setMileage(""); setPhone(""); setPriceRange(null); setSelectedCar(null);
-        }, 4000);
+      } else {
+        alert("Ошибка при отправке заявки");
       }
     } catch (err) {
       alert("Ошибка сети");
     }
   };
 
-  return (
-    <div className="min-h-screen bg-slate-900 text-white font-sans">
-      <header className="bg-slate-800 p-4 shadow-md flex justify-between items-center px-8">
-        <div className="text-2xl font-bold text-blue-500">Скупка Авто 24/7</div>
-        <nav className="flex gap-6 items-center">
-          <Link href="/" className="hover:text-blue-400">Главная</Link>
-          <Link href="/admin" className="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700 transition">Админка</Link>
-        </nav>
-      </header>
+  const images = {
+    manual: "/manual.jpg",
+    auto: "/auto.jpg",
+    good: "/good.jpg",
+    broken: "/broken.jpg",
+    broken2: "/engine.jpg",
+    zalog: "/zalog.jpg",
+    docs: "/docs.jpg",
+  };
 
-      <main className="flex flex-col items-center justify-center py-16 px-4">
-        <h1 className="text-4xl font-extrabold mb-4 text-center">Продай своё авто выгодно!</h1>
+  if (isSubmitted) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+        <div className="bg-white p-10 rounded-3xl shadow-xl text-center max-w-md w-full">
+          <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">✓</div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Заявка принята!</h1>
+          <p className="text-gray-500 mb-8">Наш менеджер свяжется с вами в ближайшее время, чтобы обсудить детали и цену.</p>
+          <button onClick={() => window.location.reload()} className="block w-full bg-red-700 text-white font-bold py-4 rounded-xl hover:bg-red-800 transition">
+            На главную
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!showQuiz) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col font-sans relative overflow-hidden">
         
-        <div className="bg-white text-black p-8 rounded-2xl shadow-2xl w-full max-w-lg">
-          <h2 className="text-2xl font-bold mb-6 text-center">Оценить автомобиль</h2>
-          
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div 
+          className="absolute inset-0 z-0 opacity-40"
+          style={{
+            backgroundImage: "url('/hero-bg.jpg')", 
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        ></div>
+
+        <header className="relative z-10 flex justify-between items-center p-6 md:px-12 text-white">
+          <div className="text-xl font-black tracking-tight">
+             СКУПКА АВТО
+          </div>
+          <div className="text-lg font-bold">+7 963 738-43-04</div>
+        </header>
+
+        <main className="relative z-10 flex-grow flex items-center px-6 md:px-12 py-12">
+          <div className="max-w-xl">
+            <p className="text-gray-400 text-base mb-2">Калининградская область</p>
             
-            <div className="relative">
-              <input 
-                type="text" 
-                placeholder="Марка и модель" 
-                className="border-2 border-gray-300 p-3 rounded-lg outline-none focus:border-blue-500 w-full" 
-                value={brand} 
-                onChange={(e) => {
-                  setBrand(e.target.value);
-                  setShowSuggestions(true);
-                  setSelectedCar(null);
-                }} 
+            <h1 className="text-3xl md:text-4xl font-bold text-white leading-snug mb-6">
+              Срочный выкуп автомобилей в любом состоянии
+            </h1>
+            
+            <p className="text-lg md:text-xl text-red-500 font-bold mb-8">
+              Деньги в кармане за 60 минут
+            </p>
+            
+            <button 
+              onClick={() => setShowQuiz(true)}
+              className="bg-red-700 text-white font-bold text-base py-3 px-8 rounded-full hover:bg-red-800 transition shadow-lg shadow-red-700/50"
+            >
+              РАССЧИТАТЬ СТОИМОСТЬ
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4 font-sans text-gray-900">
+      
+      <div className="w-full max-w-4xl flex justify-between items-center mb-8">
+        <button onClick={() => setShowQuiz(false)} className="text-xl font-black text-red-700 tracking-tight flex items-center gap-2 hover:text-red-800">
+          ← Назад
+        </button>
+        <Link href="/admin" className="text-sm text-gray-400 hover:text-gray-800">Админка</Link>
+      </div>
+
+      <div className="bg-white w-full max-w-4xl rounded-3xl shadow-lg p-8 md:p-12 min-h-[500px] flex flex-col justify-between relative overflow-hidden">
+        
+        {step < 7 && (
+          <div className="flex items-center gap-4 mb-10">
+            <div className="bg-red-700 text-white font-bold px-4 py-2 rounded-full text-sm">
+              {step} из 6
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800">
+              {step === 1 && "Марка и модель автомобиля"}
+              {step === 2 && "Год выпуска автомобиля"}
+              {step === 3 && "Тип коробки передач"}
+              {step === 4 && "Состояние вашего автомобиля"}
+              {step === 5 && "Пробег вашего автомобиля"}
+              {step === 6 && "Когда удобно встретиться?"}
+            </h2>
+          </div>
+        )}
+
+        <div className="flex-grow">
+          {step === 1 && (
+            <div className="relative max-w-lg">
+              <input
+                type="text"
+                placeholder="Например: Lada Vesta"
+                className="w-full bg-gray-100 border-2 border-transparent focus:border-red-500 rounded-xl p-4 text-lg outline-none transition"
+                value={data.brand}
+                onChange={(e) => { setData({ ...data, brand: e.target.value }); setShowSuggestions(true); }}
                 onFocus={() => setShowSuggestions(true)}
-                required 
               />
               {showSuggestions && suggestions.length > 0 && (
-                <ul className="absolute z-10 w-full bg-white border border-gray-200 mt-1 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                <ul className="absolute z-10 w-full bg-white border border-gray-200 mt-2 rounded-xl shadow-xl max-h-60 overflow-y-auto">
                   {suggestions.map((car) => (
-                    <li 
-                      key={car.id} 
-                      onClick={() => handleSelectCar(car)}
-                      className="p-3 hover:bg-blue-50 cursor-pointer border-b last:border-0"
-                    >
-                      <div className="font-bold">{car.brand} {car.model}</div>
-                      <div className="text-xs text-gray-500">Годы: {car.years} | Рынок: ~{car.marketPrice.toLocaleString()} ₽</div>
+                    <li key={car.id} onClick={() => handleSelectCar(car)} className="p-4 hover:bg-red-50 cursor-pointer border-b last:border-0 font-bold">
+                      {car.brand} {car.model}
                     </li>
                   ))}
                 </ul>
               )}
             </div>
+          )}
 
-            <div className="flex gap-4">
-              <div className="w-1/2 relative">
-                <input type="number" placeholder="Год выпуска" className="border-2 border-gray-300 p-3 rounded-lg outline-none focus:border-blue-500 w-full" value={year} onChange={(e) => setYear(e.target.value)} required />
-                {selectedCar && <p className="text-xs text-blue-600 mt-1 absolute">Выпуск: {selectedCar.years}</p>}
-              </div>
-              <input type="number" placeholder="Пробег (км)" className="border-2 border-gray-300 p-3 rounded-lg outline-none focus:border-blue-500 w-1/2" value={mileage} onChange={(e) => setMileage(e.target.value)} required />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg border">
-              <div>
-                <label className="block text-sm font-bold mb-1">На ходу?</label>
-                <select className="w-full p-2 border rounded" value={isRunning} onChange={(e) => setIsRunning(e.target.value)}>
-                  <option value="yes">Да</option>
-                  <option value="no">Нет</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-bold mb-1">Документы</label>
-                <select className="w-full p-2 border rounded" value={docs} onChange={(e) => setDocs(e.target.value)}>
-                  <option value="full">Полный пакет</option>
-                  <option value="no_pts">Нет ПТС</option>
-                  <option value="no_sts">Нет СТС</option>
-                </select>
-              </div>
-              <div className="col-span-2">
-                <label className="block text-sm font-bold mb-1">Битая?</label>
-                <select className="w-full p-2 border rounded" value={isDamaged} onChange={(e) => setIsDamaged(e.target.value)}>
-                  <option value="no">Нет</option>
-                  <option value="yes">Да</option>
-                </select>
-              </div>
-            </div>
-
-            <button type="button" onClick={handleEvaluate} className="bg-slate-800 text-white font-bold py-3 rounded-lg hover:bg-slate-700 transition mt-2">
-              Узнать цену
-            </button>
-
-            {priceRange && (
-              <div className="bg-green-100 border border-green-400 text-green-800 p-4 rounded-lg text-center font-bold text-lg">
-                Примерная цена: от {priceRange.min.toLocaleString()} ₽ до {priceRange.max.toLocaleString()} ₽
-              </div>
-            )}
-
-            {priceRange && (
-              <div className="mt-2 border-t pt-4 flex flex-col gap-3">
-                <input type="tel" placeholder="Ваш телефон" className="border-2 border-gray-300 p-3 rounded-lg outline-none focus:border-blue-500" value={phone} onChange={(e) => setPhone(e.target.value)} required />
-                <button type="submit" className="bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">
-                  Оставить заявку
+          {step === 2 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {["до 2005", "2005-2010", "2011-2015", "2016-2020", "2021-2026"].map(year => (
+                <button key={year} onClick={() => setData({ ...data, yearRange: year })} className={`p-6 text-left rounded-2xl border-2 transition font-medium ${data.yearRange === year ? 'border-red-600 bg-red-50 text-red-700' : 'border-gray-100 bg-gray-50 hover:border-red-300'}`}>
+                  {year}
                 </button>
-              </div>
-            )}
-            
-            {isSubmitted && <div className="text-center text-green-600 font-bold mt-2">Заявка отправлена!</div>}
-          </form>
-        </div>
-      </main>
+              ))}
+            </div>
+          )}
 
-      <footer className="bg-slate-950 py-8 text-center text-gray-400 mt-10">
-        <p className="text-lg mb-2">Нужна помощь?</p>
-        <a href="tel:+70000000000" className="text-2xl font-bold text-white hover:text-blue-400 transition">+7 (000) 000-00-00</a>
-        <p className="mt-4 text-sm">© 2026 Скупка Авто. Все права защищены. (Лицензия отсутствует)</p>
-      </footer>
+          {step === 3 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
+              <button onClick={() => setData({ ...data, transmission: "Механическая" })} className={`rounded-2xl border-2 overflow-hidden transition text-left ${data.transmission === "Механическая" ? 'border-red-600 shadow-lg' : 'border-gray-100 hover:border-red-300'}`}>
+                <img src={images.manual} alt="Механика" className="w-full h-40 object-cover" />
+                <div className="p-4 font-bold text-center bg-white">Механическая</div>
+              </button>
+              <button onClick={() => setData({ ...data, transmission: "Автоматическая" })} className={`rounded-2xl border-2 overflow-hidden transition text-left ${data.transmission === "Автоматическая" ? 'border-red-600 shadow-lg' : 'border-gray-100 hover:border-red-300'}`}>
+                <img src={images.auto} alt="Автомат" className="w-full h-40 object-cover" />
+                <div className="p-4 font-bold text-center bg-white">Автоматическая</div>
+              </button>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {[
+                { label: "Хорошее состояние", img: images.good },
+                { label: "Битое", img: images.broken },
+                { label: "Неисправное", img: images.broken2 },
+                { label: "В залоге", img: images.zalog },
+                { label: "Без документов", img: images.docs }
+              ].map(item => (
+                <button key={item.label} onClick={() => setData({ ...data, condition: item.label })} className={`rounded-2xl border-2 overflow-hidden transition text-left ${data.condition === item.label ? 'border-red-600 shadow-lg' : 'border-gray-100 hover:border-red-300'}`}>
+                  <img src={item.img} alt={item.label} className="w-full h-24 object-cover" />
+                  <div className="p-3 font-bold text-sm text-center bg-white">{item.label}</div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {step === 5 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {["от 0 до 50 000 км", "от 50 000 до 100 000 км", "от 100 000 до 200 000 км", "от 200 000 км и более"].map(mil => (
+                <button key={mil} onClick={() => setData({ ...data, mileageRange: mil })} className={`p-6 text-left rounded-2xl border-2 transition font-medium ${data.mileageRange === mil ? 'border-red-600 bg-red-50 text-red-700' : 'border-gray-100 bg-gray-50 hover:border-red-300'}`}>
+                  {mil}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {step === 6 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {["Сегодня", "Завтра", "Ближайшие 3 дня", "Ближайшую неделю"].map(time => (
+                <button key={time} onClick={() => setData({ ...data, meetingTime: time })} className={`p-6 text-left rounded-2xl border-2 transition font-medium ${data.meetingTime === time ? 'border-red-600 bg-red-50 text-red-700' : 'border-gray-100 bg-gray-50 hover:border-red-300'}`}>
+                  {time}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {step === 7 && (
+            <form onSubmit={handleSubmit} className="max-w-lg">
+              <h2 className="text-xl font-bold text-red-700 mb-2">Мы подготовили для Вас вариант оценки!</h2>
+              <p className="text-gray-500 mb-8">Куда удобнее отправить результат?</p>
+
+              <div className="flex gap-4 mb-6">
+                {["Звонок", "Telegram", "MAX"].map(method => (
+                  <button type="button" key={method} onClick={() => setData({ ...data, contactMethod: method })} className={`flex-1 py-3 rounded-xl border-2 transition font-medium ${data.contactMethod === method ? 'border-red-600 text-red-700 bg-red-50' : 'border-gray-200 text-gray-500 hover:border-red-300'}`}>
+                    {method}
+                  </button>
+                ))}
+              </div>
+
+              <p className="font-bold mb-2">Укажите Ваш номер телефона</p>
+              <input
+                type="tel"
+                placeholder="+7 (___) ___-__-__"
+                className="w-full bg-gray-100 border-2 border-transparent focus:border-red-500 rounded-xl p-4 text-lg outline-none transition mb-6"
+                value={data.phone}
+                onChange={(e) => setData({ ...data, phone: e.target.value })}
+                required
+              />
+
+              <button type="submit" className="w-full bg-red-700 text-white font-bold text-lg py-4 rounded-xl hover:bg-red-800 transition shadow-lg shadow-red-700/30">
+                ПОЛУЧИТЬ ЦЕНУ
+              </button>
+            </form>
+          )}
+        </div>
+
+        <div className="flex justify-between items-center mt-10 pt-6 border-t border-gray-100">
+          {step > 1 && step < 7 ? (
+            <button onClick={() => setStep(step - 1)} className="px-8 py-3 rounded-xl border border-gray-300 text-gray-600 font-bold hover:bg-gray-50 transition">
+              НАЗАД
+            </button>
+          ) : <div></div>}
+
+          {step < 6 && (
+            <button onClick={nextStep} className="px-10 py-3 rounded-xl bg-red-700 text-white font-bold hover:bg-red-800 transition shadow-lg shadow-red-700/30 ml-auto">
+              ДАЛЕЕ
+            </button>
+          )}
+          
+          {step === 6 && (
+             <button onClick={() => setStep(7)} className="px-10 py-3 rounded-xl bg-red-700 text-white font-bold hover:bg-red-800 transition shadow-lg shadow-red-700/30 ml-auto">
+              УЗНАТЬ ЦЕНУ
+            </button>
+          )}
+        </div>
+
+      </div>
     </div>
   );
 }

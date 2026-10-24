@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/app/lib/prisma";
+import { prisma } from "../db";
 
 export async function POST(req: Request) {
   try {
@@ -16,6 +16,7 @@ export async function POST(req: Request) {
         isDamaged: body.isDamaged,
         priceMin: Number(body.priceMin),
         priceMax: Number(body.priceMax),
+        extraInfo: body.extraInfo || "", // Дополнительная инфа (КПП, время)
       },
     });
 
