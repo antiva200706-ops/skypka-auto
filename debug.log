@@ -1,0 +1,12 @@
+ Container skypka-auto-db-1 Running 
+Attaching to app-1
+ Container skypka-auto-app-1 Starting 
+ Container skypka-auto-app-1 Started 
+app-1  | ▲ Next.js 16.4.2
+app-1  | - Local:         http://localhost:3000
+app-1  | ✓ Ready in 289ms
+app-1  | ✓ Running next.config.ts took 140ms
+ Compose Stopping Gracefully Stopping... press Ctrl+C again to force
+ Container skypka-auto-app-1 Stopping 
+ Container skypka-auto-app-1 Stopped 
+
