@@ -6,4 +6,5 @@ COPY . .
 RUN npx prisma generate
 RUN npm run build
 EXPOSE 3000
-CMD ["node", "--max-old-space-size=512", "node_modules/next/dist/bin/next", "start"]
+ENV NODE_OPTIONS="--max-old-space-size=512"
+CMD ["npm", "start"]
