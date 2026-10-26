@@ -143,6 +143,9 @@ export default function Home() {
           </div>
           <p>© 2026 Скупка Авто. Все права защищены.</p>
           <p className="mt-2">+7 952 799-27-60 | Калининградская область</p>
+          <div className="mt-6">
+             <Link href="/admin" className="text-xs text-gray-600 hover:text-white transition">Вход для сотрудника</Link>
+          </div>
         </div>
       </footer>
 

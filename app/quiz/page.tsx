@@ -5,7 +5,6 @@ import Link from "next/link";
 
 export default function Quiz() {
   const [step, setStep] = useState(1);
-  const [isSubmitted, setIsSubmitted] = useState(false);
   
   const [data, setData] = useState({
     brand: "",
@@ -70,7 +69,11 @@ export default function Quiz() {
       });
 
       if (res.ok) {
-        setIsSubmitted(true);
+        alert("Заявка успешно отправлена! Мы свяжемся с вами.");
+        // Очищаем форму и сбрасываем на 1 шаг
+        setData({ ...data, brand: "", yearRange: "", transmission: "", condition: "", mileageRange: "", meetingTime: "", phone: "" });
+        setStep(1);
+        window.location.href = "/"; // Перенаправляем на главную
       } else {
         alert("Ошибка при отправке заявки");
       }
@@ -89,21 +92,6 @@ export default function Quiz() {
     docs: "/docs.jpg",
   };
 
-  if (isSubmitted) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-        <div className="bg-white p-10 rounded-3xl shadow-xl text-center max-w-md w-full">
-          <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">✓</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Заявка принята!</h1>
-          <p className="text-gray-500 mb-8">Наш менеджер свяжется с вами в ближайшее время, чтобы обсудить детали и цену.</p>
-          <Link href="/" className="block w-full bg-red-700 text-white font-bold py-4 rounded-xl hover:bg-red-800 transition text-center">
-            На главную
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4 font-sans text-gray-900">
       
@@ -111,7 +99,6 @@ export default function Quiz() {
         <Link href="/" className="text-xl font-black text-red-700 tracking-tight flex items-center gap-2 hover:text-red-800">
           ← На главную
         </Link>
-        <Link href="/admin" className="text-sm text-gray-400 hover:text-gray-800">Админка</Link>
       </div>
 
       <div className="bg-white w-full max-w-4xl rounded-3xl shadow-lg p-8 md:p-12 min-h-[500px] flex flex-col justify-between relative overflow-hidden">
@@ -265,6 +252,11 @@ export default function Quiz() {
           )}
         </div>
 
+      </div>
+
+      {/* Кнопка Вход для сотрудника внизу опроса */}
+      <div className="mt-8">
+        <Link href="/admin" className="text-sm text-gray-500 hover:text-black">Вход для сотрудника</Link>
       </div>
     </div>
   );
